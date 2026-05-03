@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IKAF Digital Campus - AI Tutor Platform</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a1a;color:#fff;min-height:100vh}
+.login-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);display:flex;align-items:center;justify-content:center;z-index:10000;transition:opacity .5s}
+.login-screen.hidden{opacity:0;pointer-events:none}
+.login-box{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:40px;width:90%;max-width:420px;text-align:center}
+.login-logo{width:80px;height:80px;background:linear-gradient(45deg,#e94560,#ff6b6b);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:bold;margin:0 auto 20px;box-shadow:0 4px 20px rgba(233,69,96,0.4)}
+.login-box h1{font-size:24px;margin-bottom:10px}
+.login-box p{color:#a0a0a0;margin-bottom:30px;font-size:14px}
+.input-group{margin-bottom:15px;text-align:left}
+.input-group label{display:block;margin-bottom:8px;font-size:12px;color:#a0a0a0;text-transform:uppercase;letter-spacing:1px}
+.input-group input{width:100%;padding:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:15px;outline:none}
+.input-group input:focus{border-color:#e94560}
+.btn{width:100%;padding:14px;background:linear-gradient(45deg,#e94560,#ff6b6b);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:600;cursor:pointer;transition:transform .3s;margin-top:10px}
+.btn:hover{transform:translateY(-2px)}
+.btn-secondary{background:transparent;border:1px solid rgba(255,255,255,0.2);margin-top:10px}
+.role-selector{display:flex;gap:10px;margin-bottom:20px}
+.role-btn{flex:1;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#a0a0a0;font-size:13px;cursor:pointer;transition:all .3s}
+.role-btn.active{background:rgba(233,69,96,0.2);border-color:#e94560;color:#e94560}
+.app{display:none}
+.app.active{display:block}
+.header{background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1);position:fixed;width:100%;top:0;z-index:1000}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:40px;height:40px;background:linear-gradient(45deg,#e94560,#ff6b6b);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold}
+.logo-text h1{font-size:16px;font-weight:700}
+.logo-text span{font-size:10px;color:#a0a0a0;text-transform:uppercase;letter-spacing:2px}
+.user-menu{display:flex;align-items:center;gap:10px}
+.user-avatar{width:36px;height:36px;background:linear-gradient(135deg,#3b82f6,#60a5fa);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}
+.sidebar{position:fixed;left:0;top:65px;width:260px;height:calc(100vh - 65px);background:rgba(255,255,255,0.03);border-right:1px solid rgba(255,255,255,0.1);padding:20px 0;overflow-y:auto;z-index:999}
+.nav-item{padding:12px 20px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .3s;color:#a0a0a0;font-size:14px;border-left:3px solid transparent}
+.nav-item:hover,.nav-item.active{background:rgba(233,69,96,0.1);color:#fff;border-left-color:#e94560}
+.nav-icon{font-size:18px}
+.main-content{margin-left:260px;margin-top:65px;padding:20px;min-height:calc(100vh - 65px)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px}
+.stat-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px}
+.stat-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.stat-icon.blue{background:rgba(59,130,246,0.2)}
+.stat-icon.green{background:rgba(74,222,128,0.2)}
+.stat-icon.orange{background:rgba(251,146,60,0.2)}
+.stat-icon.purple{background:rgba(168,85,247,0.2)}
+.stat-value{font-size:28px;font-weight:800;margin-bottom:5px}
+.stat-label{font-size:12px;color:#a0a0a0}
+.modules-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.module-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;transition:all .3s;cursor:pointer}
+.module-card:hover{transform:translateY(-5px);border-color:#e94560}
+.module-image{height:160px;display:flex;align-items:center;justify-content:center;font-size:60px;position:relative}
+.module-badge{position:absolute;top:12px;right:12px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600}
+.module-badge.active{background:rgba(74,222,128,0.2);color:#4ade80}
+.module-badge.new{background:rgba(233,69,96,0.2);color:#e94560}
+.module-info{padding:20px}
+.module-title{font-size:18px;font-weight:700;margin-bottom:8px}
+.module-desc{font-size:13px;color:#a0a0a0;margin-bottom:15px}
+.module-meta{display:flex;justify-content:space-between;font-size:12px;color:#666}
+.module-progress{width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:12px;overflow:hidden}
+.module-progress-bar{height:100%;border-radius:2px;transition:width .5s}
+.tutor-view{display:none;height:calc(100vh - 65px)}
+.tutor-view.active{display:flex;flex-direction:column}
+.tutor-header{padding:15px 20px;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center}
+.tutor-header h2{font-size:20px;font-weight:700}
+.back-btn{padding:8px 16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#fff;cursor:pointer}
+.tutor-container{flex:1;display:grid;grid-template-columns:1fr 350px;overflow:hidden}
+.video-area{flex:1;background:linear-gradient(135deg,#1a1a3e,#0f3460);display:flex;align-items:center;justify-content:center;position:relative}
+.tutor-avatar-large{width:150px;height:150px;background:linear-gradient(135deg,#e94560,#ff6b6b,#f59e0b);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:70px;animation:tutorBreathe 3s ease-in-out infinite;box-shadow:0 0 60px rgba(233,69,96,0.4)}
+@keyframes tutorBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.tutor-status{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);padding:10px 20px;border-radius:20px;font-size:13px;display:flex;align-items:center;gap:10px}
+.sound-bars{display:flex;gap:2px;align-items:flex-end;height:16px}
+.sound-bar{width:3px;background:#4ade80;border-radius:2px;animation:soundWave .5s ease-in-out infinite alternate}
+.sound-bar:nth-child(1){height:6px;animation-delay:0s}
+.sound-bar:nth-child(2){height:12px;animation-delay:.1s}
+.sound-bar:nth-child(3){height:8px;animation-delay:.2s}
+.sound-bar:nth-child(4){height:14px;animation-delay:.3s}
+.sound-bar:nth-child(5){height:10px;animation-delay:.15s}
+@keyframes soundWave{0%{height:4px}100%{height:16px}}
+.video-controls{display:flex;align-items:center;gap:10px;padding:10px 15px;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.1)}
+.control-btn{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:6px;border-radius:6px}
+.control-btn:hover{background:rgba(255,255,255,0.1)}
+.progress-container{flex:1;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;cursor:pointer}
+.progress-bar{height:100%;background:linear-gradient(90deg,#e94560,#ff6b6b);border-radius:2px;width:0%;transition:width .3s}
+.time-display{font-size:11px;color:#a0a0a0;min-width:80px;text-align:center}
+.lesson-content{padding:20px;overflow-y:auto;max-height:250px}
+.lesson-title{font-size:18px;font-weight:700;margin-bottom:15px}
+.lesson-text{font-size:14px;line-height:1.8;color:#d0d0d0}
+.lesson-text p{margin-bottom:10px}
+.highlight-box{background:rgba(233,69,96,0.1);border-left:3px solid #e94560;padding:15px;border-radius:8px;margin:15px 0}
+.highlight-box h4{color:#e94560;margin-bottom:8px;font-size:14px}
+.example-box{background:rgba(74,222,128,0.1);border-left:3px solid #4ade80;padding:15px;border-radius:8px;margin:15px 0}
+.example-box h4{color:#4ade80;margin-bottom:8px;font-size:14px}
+.chat-panel{background:rgba(255,255,255,0.02);border-left:1px solid rgba(255,255,255,0.1);display:flex;flex-direction:column;overflow:hidden}
+.chat-header{padding:15px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px}
+.chat-avatar{width:40px;height:40px;background:linear-gradient(45deg,#e94560,#ff6b6b);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px}
+.chat-header h3{font-size:15px}
+.chat-header p{font-size:11px;color:#4ade80}
+.chat-messages{flex:1;overflow-y:auto;padding:15px;display:flex;flex-direction:column;gap:12px}
+.message{max-width:90%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5;animation:messageSlide .3s ease}
+@keyframes messageSlide{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.message-tutor{background:rgba(233,69,96,0.15);border:1px solid rgba(233,69,96,0.3);align-self:flex-start;border-bottom-left-radius:4px}
+.message-user{background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);align-self:flex-end;border-bottom-right-radius:4px}
+.message-time{font-size:10px;color:#666;margin-top:5px}
+.typing-indicator{display:none;align-self:flex-start;background:rgba(233,69,96,0.1);padding:10px 14px;border-radius:14px;border-bottom-left-radius:4px}
+.typing-indicator.active{display:flex}
+.typing-dots{display:flex;gap:3px;align-items:center;height:16px}
+.typing-dot{width:6px;height:6px;background:#e94560;border-radius:50%;animation:typingBounce 1.4s ease-in-out infinite}
+.typing-dot:nth-child(1){animation-delay:0s}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-8px)}}
+.chat-input-area{padding:12px;border-top:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.02)}
+.quick-questions{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.quick-q{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:5px 10px;border-radius:12px;font-size:11px;color:#a0a0a0;cursor:pointer;transition:all .3s}
+.quick-q:hover{border-color:#e94560;color:#e94560;background:rgba(233,69,96,0.1)}
+.chat-input-container{display:flex;gap:8px;align-items:center}
+.chat-input{flex:1;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;color:#fff;font-size:13px;outline:none}
+.chat-input:focus{border-color:#e94560}
+.send-btn{width:36px;height:36px;background:linear-gradient(45deg,#e94560,#ff6b6b);border:none;border-radius:50%;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.resume-btn{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(45deg,#e94560,#ff6b6b);border:none;padding:12px 25px;border-radius:25px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 15px rgba(233,69,96,0.5);display:none;align-items:center;gap:8px;z-index:998}
+.resume-btn.show{display:flex;animation:slideUp .3s ease}
+@keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:rgba(233,69,96,0.95);color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:10000;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center;max-width:90%}
+.toast.show{opacity:1}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:2px}
+@media(max-width:1024px){.sidebar{width:220px}.main-content{margin-left:220px}.tutor-container{grid-template-columns:1fr}.chat-panel{position:fixed;top:0;right:0;width:100%;height:100%;z-index:2000;display:none}.chat-panel.active{display:flex}}
+@media(max-width:768px){.sidebar{display:none}.main-content{margin-left:0}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+<div class="login-box">
+<div class="login-logo">IK</div>
+<h1>IKAF Digital Campus</h1>
+<p>Platforma e Arsimit me AI Tutor</p>
+
+<div class="role-selector">
+<button class="role-btn active" onclick="selectRole('student')">🎓 Student</button>
+<button class="role-btn" onclick="selectRole('trainer')">👨‍🏫 Trajner</button>
+<button class="role-btn" onclick="selectRole('admin')">👑 Admin</button>
+</div>
+
+<div class="input-group">
+<label>Email</label>
+<input type="email" id="loginEmail" placeholder="emri@ikaf.org">
+</div>
+
+<div class="input-group">
+<label>Fjalëkalimi</label>
+<input type="password" id="loginPassword" placeholder="••••••••">
+</div>
+
+<button class="btn" onclick="login()">🔐 Hyr në Platformë</button>
+
+<div style="margin-top:20px;padding:15px;background:rgba(255,255,255,0.03);border-radius:10px;font-size:12px">
+<strong style="color:#a0a0a0">🔑 Llogari Demo:</strong><br>
+👑 admin@ikaf.org / ikaf2026<br>
+👨‍🏫 trainer@ikaf.org / trainer123<br>
+🎓 student@ikaf.org / student123
+</div>
+</div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="mainApp">
+
+<!-- Header -->
+<header class="header">
+<div class="logo">
+<div class="logo-icon">IK</div>
+<div class="logo-text">
+<h1>IKAF Digital</h1>
+<span>AI Tutor Campus</span>
+</div>
+</div>
+<div class="user-menu">
+<span id="userName" style="font-size:13px;color:#a0a0a0">Student</span>
+<div class="user-avatar" onclick="logout()">👤</div>
+</div>
+</header>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+<div class="nav-item active" onclick="showPage('dashboard')">
+<span class="nav-icon">📊</span> Dashboard
+</div>
+<div class="nav-item" onclick="showPage('modules')">
+<span class="nav-icon">📚</span> Modulet
+</div>
+<div class="nav-item" onclick="showPage('myprogress')">
+<span class="nav-icon">📈</span> Progresi
+</div>
+<div class="nav-item" onclick="showPage('certificates')">
+<span class="nav-icon">🏆</span> Certifikatat
+</div>
+<div class="nav-item" onclick="showPage('chat')">
+<span class="nav-icon">💬</span> Chat me Tutor
+</div>
+<div class="nav-item" onclick="showPage('settings')">
+<span class="nav-icon">⚙️</span> Cilësimet
+</div>
+<div class="nav-item" onclick="logout()">
+<span class="nav-icon">🚪</span> Dil
+</div>
+</nav>
+
+<!-- Main Content -->
+<main class="main-content">
+
+<!-- DASHBOARD -->
+<div class="page" id="page-dashboard">
+<div class="stats-grid">
+<div class="stat-card">
+<div class="stat-header">
+<span class="stat-label">Modulet</span>
+<div class="stat-icon blue">📚</div>
+</div>
+<div class="stat-value">6</div>
+</div>
+<div class="stat-card">
+<div class="stat-header">
+<span class="stat-label">Progresi</span>
+<div class="stat-icon green">📈</div>
+</div>
+<div class="stat-value">0%</div>
+</div>
+<div class="stat-card">
+<div class="stat-header">
+<span class="stat-label">Certifikata</span>
+<div class="stat-icon orange">🏆</div>
+</div>
+<div class="stat-value">0</div>
+</div>
+<div class="stat-card">
+<div class="stat-header">
+<span class="stat-label">Koha</span>
+<div class="stat-icon purple">⏱️</div>
+</div>
+<div class="stat-value">0h</div>
+</div>
+</div>
+
+<h3 style="margin-bottom:15px">📚 Modulet e Disponueshme</h3>
+<div class="modules-grid" id="dashboardModules"></div>
+</div>
+
+<!-- MODULES -->
+<div class="page" id="page-modules" style="display:none">
+<h2 style="margin-bottom:20px">📚 Të Gjitha Modulet</h2>
+<div class="modules-grid" id="allModules"></div>
+</div>
+
+<!-- MY PROGRESS -->
+<div class="page" id="page-myprogress" style="display:none">
+<h2 style="margin-bottom:20px">📈 Progresi Im</h2>
+<div id="progressContent"></div>
+</div>
+
+<!-- CERTIFICATES -->
+<div class="page" id="page-certificates" style="display:none">
+<h2 style="margin-bottom:20px">🏆 Certifikatat e Mia</h2>
+<div style="text-align:center;padding:60px 20px;color:#666">
+<div style="font-size:60px;margin-bottom:20px">📜</div>
+<h3 style="color:#fff;margin-bottom:10px">Nuk keni certifikata ende</h3>
+<p>Përfundoni një modul për të marrë certifikatën!</p>
+</div>
+</div>
+
+<!-- CHAT -->
+<div class="page" id="page-chat" style="display:none">
+<h2 style="margin-bottom:20px">💬 Chat me Tutor AI</h2>
+<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:30px;text-align:center">
+<div style="font-size:60px;margin-bottom:20px">🤖</div>
+<h3>Tutor AI është gjithmonë gati!</h3>
+<p style="color:#a0a0a0;margin:15px 0">Hapni një modul dhe bëni pyetje gjatë ligjërimit.</p>
+<button class="btn" style="width:auto;padding:10px 25px" onclick="showPage('modules')">Shiko Modulet</button>
+</div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings" style="display:none">
+<h2 style="margin-bottom:20px">⚙️ Cilësimet</h2>
+<div style="max-width:500px">
+<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:25px;margin-bottom:20px">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div>
+<div style="font-weight:700;margin-bottom:5px">🔊 Zëri i Tutorit</div>
+<div style="font-size:13px;color:#a0a0a0">Aktivizo/çaktivizo zërin</div>
+</div>
+<button class="btn" style="width:auto;padding:8px 20px" onclick="toggleTTSGlobal()" id="ttsBtn">ON</button>
+</div>
+</div>
+</div>
+</div>
+
+</main>
+</div>
+
+<!-- TUTOR VIEW -->
+<div class="tutor-view" id="tutorView">
+<div class="tutor-header">
+<h2 id="tutorTitle">🎓 Tutor AI</h2>
+<button class="back-btn" onclick="closeTutor()">← Kthehu</button>
+</div>
+<div class="tutor-container">
+<div style="display:flex;flex-direction:column;overflow:hidden">
+<div class="video-area">
+<div class="tutor-avatar-large" id="tutorAvatar">🎓</div>
+<div class="tutor-status">
+<div class="sound-bars" id="soundBars">
+<div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div><div class="sound-bar"></div>
+</div>
+<span id="tutorStatus">Duke shpjeguar...</span>
+</div>
+</div>
+<div class="video-controls">
+<button class="control-btn" onclick="togglePlay()" id="playBtn">⏸️</button>
+<div class="progress-container" onclick="seekVideo(event)">
+<div class="progress-bar" id="videoProgress" style="width:0%"></div>
+</div>
+<span class="time-display" id="timeDisplay">00:00 / 15:00</span>
+<button class="control-btn" onclick="toggleChatPanel()">💬</button>
+</div>
+<div class="lesson-content">
+<h3 class="lesson-title" id="lessonTitle">Hyrje</h3>
+<div class="lesson-text" id="lessonText">
+<p>Mirësevini! Klikoni "Vazhdo" për të filluar.</p>
+</div>
+</div>
+</div>
+<div class="chat-panel" id="chatPanel">
+<div class="chat-header">
+<div class="chat-avatar">🤖</div>
+<div>
+<h3>Tutor AI</h3>
+<p>🟢 Online</p>
+</div>
+</div>
+<div class="chat-messages" id="chatMessages">
+<div class="message message-tutor">
+<strong>🎓 Tutor AI:</strong><br>
+Përshëndetje! Jam Tutori juaj. Bëni pyetje në çdo moment!
+<div class="message-time">Sot</div>
+</div>
+</div>
+<div class="typing-indicator" id="typingIndicator">
+<div class="typing-dots">
+<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+</div>
+</div>
+<div class="chat-input-area">
+<div class="quick-questions" id="quickQuestions">
+<button class="quick-q" onclick="sendQuick('Çfarë do të mësoj?')">Çfarë do të mësoj?</button>
+<button class="quick-q" onclick="sendQuick('Shpjegoni më thjesht')">Shpjegoni më thjesht</button>
+<button class="quick-q" onclick="sendQuick('Jepni shembull')">Jepni shembull</button>
+</div>
+<div class="chat-input-container">
+<input type="text" class="chat-input" id="chatInput" placeholder="Pyetni Tutorin..." onkeypress="handleKeyPress(event)">
+<button class="send-btn" onclick="sendMessage()">➤</button>
+</div>
+</div>
+</div>
+</div>
+<button class="resume-btn" id="resumeBtn" onclick="resumeLecture()">▶️ Vazhdo Ligjërimin</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== FIREBASE CONFIGURATION =====
+const firebaseConfig = {
+  apiKey: "AIzaSyD4aoV8BerD7nmDKCydymjmKUNzdyYvhmc",
+  authDomain: "ikaf-digital-campus.firebaseapp.com",
+  projectId: "ikaf-digital-campus",
+  storageBucket: "ikaf-digital-campus.firebasestorage.app",
+  messagingSenderId: "63983058185",
+  appId: "1:63983058185:web:bda033d9cd30277fffe7d8",
+  measurementId: "G-MQZJM6P20S"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ===== DATA =====
+const modulesData = [
+{id:'tatime',title:'💰 Tatimet',desc:'Sistemi tatimor i Shqipërisë. TVSH, tatimi mbi fitimin, TAP, deklarimet.',icon:'💰',lessons:5,difficulty:'Mesatar',color:'linear-gradient(135deg,#e94560,#ff6b6b)',progressColor:'#e94560',topics:['Hyrje','TVSH','Tatimi mbi Fitimin','TAP','Deklarimet']},
+{id:'kontabilitet',title:'📊 Kontabiliteti',desc:'Kontabiliteti financiar, bilanci, raportet, standartet ndërkombëtare.',icon:'📊',lessons:8,difficulty:'I Avancuar',color:'linear-gradient(135deg,#3b82f6,#60a5fa)',progressColor:'#3b82f6',topics:['Hyrje','Bilanci','Raportet','Auditimi']},
+{id:'ligj',title:'⚖️ Ligji i Biznesit',desc:'Ligji komercial, kontratat, pronësia intelektuale, zgjidhja e mosmarrëveshjeve.',icon:'⚖️',lessons:6,difficulty:'Mesatar',color:'linear-gradient(135deg,#8b5cf6,#a78bfa)',progressColor:'#8b5cf6',topics:['Hyrje','Kontratat','Pronësia','Mosmarrëveshjet']},
+{id:'marketing',title:'📢 Marketing Digjital',desc:'SEO, Social Media, Google Ads, analitika, strategji marketingu.',icon:'📢',lessons:7,difficulty:'Fillesë',color:'linear-gradient(135deg,#f59e0b,#fbbf24)',progressColor:'#f59e0b',topics:['Hyrje','SEO','Social Media','Google Ads']},
+{id:'menaxhment',title:'👔 Menaxhment',desc:'Menaxhimi i projekteve, leadership, komunikimi, vendimmarrja.',icon:'👔',lessons:5,difficulty:'Fillesë',color:'linear-gradient(135deg,#10b981,#34d399)',progressColor:'#10b981',topics:['Hyrje','Projektet','Leadership','Komunikimi']},
+{id:'teknologji',title:'💻 Teknologji & AI',desc:'Cloud Computing, Inteligjenca Artificiale, Cybersecurity.',icon:'💻',lessons:6,difficulty:'I Avancuar',color:'linear-gradient(135deg,#06b6d4,#22d3ee)',progressColor:'#06b6d4',topics:['Hyrje','Cloud','AI','Cybersecurity']}
+];
+
+const lessonsData = {
+tatime: [
+{title:'Hyrje në Tatime',content:'<p>Mirësevini! Sot do të mësojmë për sistemin tatimor të Shqipërisë.</p><div class="highlight-box"><h4>📌 Çfarë do të mësoni</h4><p>• Struktura tatimore<br>• Llojet e tatimeve<br>• Detyrimet e bizneseve</p></div>'},
+{title:'TVSH-ja',content:'<p>TVSH-ja është tatimi më i rëndësishëm me shkallë <strong>20%</strong>.</p><div class="highlight-box"><h4>📌 Shkallat</h4><p>• 20% - Standarte<br>• 10% - Ushqime, ilaçe<br>• 0% - Eksportet</p></div><div class="example-box"><h4>💡 Shembull</h4><p>Produkt 1,000 lekë + TVSH 20% = <strong>1,200 lekë</strong></p></div>'},
+{title:'Tatimi mbi Fitimin',content:'<p>Tatimi mbi Fitimin është <strong>15%</strong> për të gjitha bizneset.</p><div class="example-box"><h4>💡 Llogaritje</h4><p>Të ardhurat: 10M lekë<br>Shpenzimet: 6M lekë<br>Fitimi: 4M lekë<br>Tatimi (15%): <strong>600,000 lekë</strong></p></div>'},
+{title:'Tatimi Personal (TAP)',content:'<p>TAP ka shkalla progresive.</p><div class="highlight-box"><h4>📌 Shkallat (2026)</h4><p>• 0% - deri në 40,000 lekë<br>• 13% - 40,001-80,000<br>• 23% - mbi 80,000</p></div>'},
+{title:'Deklarimet',content:'<p>Afatet kryesore:</p><div class="highlight-box"><h4>📌 Afatet</h4><p>• TVSH: data 14<br>• Tatimi: data 20<br>• TAP: data 20</p></div><div class="example-box"><h4>💡 Këshilla</h4><p>Ruani faturat, përdorni E-Filing, konsultohuni me kontabilist.</p></div>'}
+]
+};
+
+const aiResponses = {
+"tvsh": "TVSH-ja (Tatimi mbi Vlerën e Shtuar) është tatim konsumi me shkallë 20% në Shqipëri. Ka shkallë të ulëta 10% për ushqime dhe 0% për eksporte.",
+"tatimi": "Tatimi mbi Fitimin në Shqipëri është 15%. Llogaritet mbi fitimin neto pas shpenzimeve të pranueshme.",
+"tap": "Tatimi Personal (TAP) ka shkalla progresive: 0% deri në 40,000 lekë, 13% për 40,001-80,000, dhe 23% mbi 80,000 lekë/muaj.",
+"deklaroj": "Afatet: TVSH më 14, Tatimi mbi Fitimin më 20, TAP më 20 të muajit pasardhës. Penalitetet janë 1% për muaj vonese.",
+"default": "Faleminderit për pyetjen! Kjo është një temë e rëndësishme. Le të ndaloj pak për t'ju shpjeguar më detaje..."
+};
+
+// ===== STATE =====
+let currentUser = null;
+let currentRole = 'student';
+let currentModule = null;
+let currentLessonIndex = 0;
+let isPlaying = false;
+let isPausedForQuestion = false;
+let lectureProgress = 0;
+let ttsEnabled = true;
+let speechSynth = window.speechSynthesis;
+let userProgress = {};
+
+// ===== AUTH =====
+function selectRole(role) {
+currentRole = role;
+document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+event.target.classList.add('active');
+}
+
+function login() {
+const email = document.getElementById('loginEmail').value.trim();
+const password = document.getElementById('loginPassword').value.trim();
+
+if (!email || !password) {
+showToast('❌ Futni email dhe password!');
+return;
+}
+
+// Demo login
+if (email === 'admin@ikaf.org' && password === 'ikaf2026') {
+currentUser = { email, role: 'admin', name: 'Admin' };
+currentRole = 'admin';
+} else if (email === 'trainer@ikaf.org' && password === 'trainer123') {
+currentUser = { email, role: 'trainer', name: 'Trajner' };
+currentRole = 'trainer';
+} else if (email === 'student@ikaf.org' && password === 'student123') {
+currentUser = { email, role: 'student', name: 'Student' };
+currentRole = 'student';
+} else {
+showToast('❌ Email ose password i gabuar!');
+return;
+}
+
+document.getElementById('loginScreen').classList.add('hidden');
+document.getElementById('mainApp').classList.add('active');
+document.getElementById('userName').textContent = currentUser.name;
+showToast(`✅ Mirësevini, ${currentUser.name}!`);
+renderModules();
+renderAllModules();
+
+// Save to localStorage
+localStorage.setItem('ikaf_user', JSON.stringify(currentUser));
+}
+
+function logout() {
+currentUser = null;
+currentRole = 'student';
+localStorage.removeItem('ikaf_user');
+document.getElementById('mainApp').classList.remove('active');
+document.getElementById('loginScreen').classList.remove('hidden');
+showToast('👋 Dolët nga platforma!');
+}
+
+// Check for saved user
+window.addEventListener('load', () => {
+const saved = localStorage.getItem('ikaf_user');
+if (saved) {
+currentUser = JSON.parse(saved);
+currentRole = currentUser.role;
+document.getElementById('loginScreen').classList.add('hidden');
+document.getElementById('mainApp').classList.add('active');
+document.getElementById('userName').textContent = currentUser.name;
+renderModules();
+renderAllModules();
+}
+});
+
+// ===== NAVIGATION =====
+function showPage(pageId) {
+document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+const target = document.getElementById('page-' + pageId);
+if (target) target.style.display = 'block';
+
+event.target.closest('.nav-item').classList.add('active');
+
+if (pageId === 'myprogress') renderProgress();
+}
+
+// ===== RENDER =====
+function renderModules() {
+const container = document.getElementById('dashboardModules');
+const inProgress = modulesData.filter(m => (userProgress[m.id] || 0) > 0 && (userProgress[m.id] || 0) < 100);
+
+if (inProgress.length === 0) {
+const recommended = modulesData.slice(0, 3);
+container.innerHTML = recommended.map(m => createModuleCard(m)).join('');
+return;
+}
+
+container.innerHTML = inProgress.map(m => createModuleCard(m)).join('');
+}
+
+function renderAllModules() {
+const container = document.getElementById('allModules');
+container.innerHTML = modulesData.map(m => createModuleCard(m)).join('');
+}
+
+function createModuleCard(m) {
+const progress = userProgress[m.id] || 0;
+const statusBadge = progress === 100 ? 'completed' : progress > 0 ? 'active' : 'new';
+const statusText = progress === 100 ? '✓ Përfunduar' : progress > 0 ? '▶ Vazhdoni' : '● I Ri';
+
+return `
+<div class="module-card" onclick="openModule('${m.id}')">
+<div class="module-image" style="background: ${m.color}">
+${m.icon}
+<span class="module-badge ${statusBadge}">${statusText}</span>
+</div>
+<div class="module-info">
+<div class="module-title">${m.title}</div>
+<div class="module-desc">${m.desc}</div>
+<div class="module-meta">
+<span>📚 ${m.lessons} leksione</span>
+<span>🎯 ${m.difficulty}</span>
+</div>
+<div class="module-progress">
+<div class="module-progress-bar" style="width: ${progress}%; background: ${m.progressColor}"></div>
+</div>
+</div>
+</div>
+`;
+}
+
+function renderProgress() {
+const container = document.getElementById('progressContent');
+let html = '<div class="modules-grid">';
+
+modulesData.forEach(m => {
+const progress = userProgress[m.id] || 0;
+html += `
+<div class="module-card">
+<div class="module-image" style="background: ${m.color}; height: 120px; font-size: 50px;">
+${m.icon}
+</div>
+<div class="module-info">
+<div class="module-title">${m.title}</div>
+<div class="module-progress-label" style="display:flex;justify-content:space-between;font-size:12px;color:#a0a0a0;margin-bottom:8px">
+<span>Progresi</span>
+<span>${progress}%</span>
+</div>
+<div class="module-progress">
+<div class="module-progress-bar" style="width: ${progress}%; background: ${m.progressColor}"></div>
+</div>
+${progress === 100 ? '<div style="color:#4ade80;font-size:13px;margin-top:10px">✅ Përfunduar!</div>' : progress > 0 ? `<button class="btn" style="width:100%;margin-top:15px;padding:10px" onclick="openModule('${m.id}')">Vazhdo</button>` : `<button class="btn btn-secondary" style="width:100%;margin-top:15px;padding:10px" onclick="openModule('${m.id}')">Fillo</button>`}
+</div>
+</div>
+`;
+});
+
+html += '</div>';
+container.innerHTML = html;
+}
+
+// ===== TUTOR =====
+function openModule(moduleId) {
+currentModule = moduleId;
+currentLessonIndex = 0;
+const mod = modulesData.find(m => m.id === moduleId);
+
+// Update UI
+document.getElementById('tutorTitle').textContent = `${mod.icon} ${mod.title} - Tutor AI`;
+document.getElementById('tutorAvatar').textContent = mod.icon;
+
+// Update quick questions
+const quickQs = {
+'tatime': ['Çfarë është TVSH?', 'Sa është tatimi mbi fitimin?', 'Kur deklaroj?', 'Shpjegoni TAP-in'],
+'kontabilitet': ['Çfarë është bilanci?', 'Si bëhet raporti?', 'Çfarë është auditimi?'],
+'ligj': ['Çfarë është kontrata?', 'Pronësia intelektuale?', 'Zgjidhja e mosmarrëveshjeve?'],
+'marketing': ['Çfarë është SEO?', 'Si funksionon Google Ads?', 'Social Media strategjia?'],
+'menaxhment': ['Menaxhimi i projekteve', 'Leadership efektiv', 'Komunikimi në biznes'],
+'teknologji': ['Cloud Computing', 'Inteligjenca Artificiale', 'Cybersecurity bazat']
+};
+
+const questions = quickQs[moduleId] || ['Çfarë do të mësoj?', 'Shpjegoni më thjesht', 'Jepni shembull'];
+document.getElementById('quickQuestions').innerHTML = questions.map(q => 
+`<button class="quick-q" onclick="sendQuick('${q}')">${q}</button>`
+).join('');
+
+loadLesson(0);
+
+// Show tutor
+document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+document.getElementById('tutorView').classList.add('active');
+
+// Auto play
+isPlaying = true;
+updatePlayButton();
+}
+
+function closeTutor() {
+document.getElementById('tutorView').classList.remove('active');
+document.getElementById('page-dashboard').style.display = 'block';
+renderModules();
+}
+
+function loadLesson(index) {
+currentLessonIndex = index;
+const lessons = lessonsData[currentModule] || [];
+const lesson = lessons[index];
+
+if (!lesson) {
+showToast('🎉 Përfunduat modulin!');
+userProgress[currentModule] = 100;
+localStorage.setItem('ikaf_progress', JSON.stringify(userProgress));
+setTimeout(closeTutor, 2000);
+return;
+}
+
+document.getElementById('lessonTitle').textContent = lesson.title;
+document.getElementById('lessonText').innerHTML = lesson.content;
+
+lectureProgress = (index / 5) * 100;
+updateProgress();
+
+// Save progress
+userProgress[currentModule] = lectureProgress;
+localStorage.setItem('ikaf_progress', JSON.stringify(userProgress));
+}
+
+function togglePlay() {
+isPlaying = !isPlaying;
+updatePlayButton();
+}
+
+function updatePlayButton() {
+document.getElementById('playBtn').textContent = isPlaying ? '⏸️' : '▶️';
+document.getElementById('tutorStatus').textContent = isPlaying ? 'Duke shpjeguar...' : 'I ndalur';
+document.getElementById('soundBars').style.display = isPlaying ? 'flex' : 'none';
+}
+
+function seekVideo(e) {
+const rect = e.currentTarget.getBoundingClientRect();
+const percent = (e.clientX - rect.left) / rect.width;
+lectureProgress = Math.round(percent * 100);
+updateProgress();
+}
+
+function updateProgress() {
+document.getElementById('videoProgress').style.width = lectureProgress + '%';
+const currentSeconds = Math.round((lectureProgress / 100) * 900);
+document.getElementById('timeDisplay').textContent = formatTime(currentSeconds) + ' / 15:00';
+}
+
+function formatTime(seconds) {
+const mins = Math.floor(seconds / 60);
+const secs = seconds % 60;
+return String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+}
+
+// ===== CHAT =====
+function toggleChatPanel() {
+document.getElementById('chatPanel').classList.toggle('active');
+}
+
+function sendMessage() {
+const input = document.getElementById('chatInput');
+const message = input.value.trim();
+if (!message) return;
+
+addMessage(message, 'user');
+input.value = '';
+pauseForQuestion();
+
+document.getElementById('typingIndicator').classList.add('active');
+
+setTimeout(() => {
+document.getElementById('typingIndicator').classList.remove('active');
+const response = generateAIResponse(message);
+addMessage(response, 'tutor');
+document.getElementById('resumeBtn').classList.add('show');
+if (ttsEnabled) speakText(response);
+}, 1500 + Math.random() * 1000);
+}
+
+function sendQuick(question) {
+document.getElementById('chatInput').value = question;
+sendMessage();
+}
+
+function addMessage(text, sender) {
+const container = document.getElementById('chatMessages');
+const div = document.createElement('div');
+div.className = 'message message-' + sender;
+const prefix = sender === 'tutor' ? '<strong>🎓 Tutor AI:</strong><br>' : '<strong>👤 Ju:</strong><br>';
+const time = new Date().toLocaleTimeString('sq-AL', {hour: '2-digit', minute: '2-digit'});
+div.innerHTML = prefix + text + '<div class="message-time">🕐 ' + time + '</div>';
+container.appendChild(div);
+container.scrollTop = container.scrollHeight;
+}
+
+function generateAIResponse(question) {
+const lowerQ = question.toLowerCase();
+for (const [key, response] of Object.entries(aiResponses)) {
+if (lowerQ.includes(key)) {
+return response + '<br><br>🎯 <em>A keni pyetje tjetër ose dëshironi të vazhdojmë?</em>';
+}
+}
+return aiResponses.default + '<br><br>🎯 <em>Për më shumë detaje, konsultoni manualin e IKAF.</em>';
+}
+
+function pauseForQuestion() {
+isPausedForQuestion = true;
+isPlaying = false;
+updatePlayButton();
+document.getElementById('tutorStatus').textContent = 'Në pritje të pyetjes...';
+}
+
+function resumeLecture() {
+isPausedForQuestion = false;
+isPlaying = true;
+updatePlayButton();
+document.getElementById('resumeBtn').classList.remove('show');
+addMessage('✅ Vazhdojmë ligjërimin aty ku kemi mbetur!', 'tutor');
+if (ttsEnabled) speakText('Vazhdojmë ligjërimin.');
+
+// Auto advance lesson after 3 seconds
+setTimeout(() => {
+if (isPlaying && !isPausedForQuestion) {
+loadLesson(currentLessonIndex + 1);
+}
+}, 3000);
+}
+
+function handleKeyPress(e) {
+if (e.key === 'Enter') sendMessage();
+}
+
+// ===== TTS =====
+function speakText(text) {
+if (!speechSynth) {
+showToast('🔇 Zëri nuk mbështetet në këtë pajisje');
+return;
+}
+speechSynth.cancel();
+const cleanText = text.replace(/<[^>]*>/g, '');
+const utterance = new SpeechSynthesisUtterance(cleanText);
+utterance.lang = 'sq-AL';
+utterance.rate = 0.9;
+utterance.pitch = 1;
+utterance.volume = 1;
+speechSynth.speak(utterance);
+}
+
+function toggleTTSGlobal() {
+ttsEnabled = !ttsEnabled;
+document.getElementById('ttsBtn').textContent = ttsEnabled ? 'ON' : 'OFF';
+showToast(ttsEnabled ? '🔊 Zëri u aktivizua' : '🔇 Zëri u çaktivizua');
+}
+
+// ===== UTILS =====
+function showToast(message) {
+const toast = document.getElementById('toast');
+toast.textContent = message;
+toast.classList.add('show');
+setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// Load progress from localStorage
+const savedProgress = localStorage.getItem('ikaf_progress');
+if (savedProgress) {
+userProgress = JSON.parse(savedProgress);
+}
+
+// Initial render
+window.addEventListener('load', () => {
+renderModules();
+renderAllModules();
+});
+</script>
+</body>
+</html>
